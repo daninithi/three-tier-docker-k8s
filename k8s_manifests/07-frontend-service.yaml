@@ -1,0 +1,15 @@
+# Step 7 (Tier 1): a stable internal address ("frontend:80") for the frontend pods.
+# The Ingress (08-ingress.yaml) sends internet traffic here.
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: workshop
+spec:
+  type: ClusterIP
+  selector:
+    role: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP

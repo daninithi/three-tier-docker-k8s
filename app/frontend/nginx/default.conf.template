@@ -1,0 +1,62 @@
+# nginx config for the frontend container (Tier 1).
+#
+# nginx has two jobs here:
+#   1. Serve the built React files (HTML, JS, CSS).
+#   2. Forward every /api/... request to the backend (Tier 2).
+#
+# So the browser only ever talks to this one server, and the backend stays private.
+#
+# ${BACKEND_URL} is filled in from an environment variable when the container starts
+# (a feature of the official nginx image). Default: http://api:8080
+
+server {
+    listen 80;
+    server_name _;
+
+    root  /usr/share/nginx/html;
+    index index.html;
+
+    # ---- 1. API requests -> backend -------------------------------------------
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+
+        # Pass on who the real client is (the backend would otherwise only see nginx).
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout 5s;
+        proxy_read_timeout    30s;
+
+        # If the backend can't be reached, answer with JSON in the same format
+        # the API uses, so the frontend can show a clear message.
+        error_page 502 504 = @backend_unreachable;
+    }
+
+    location @backend_unreachable {
+        default_type application/json;
+        return 502 '{"error":{"message":"The API is not reachable right now. Please try again shortly."}}';
+    }
+
+    # ---- Health check for this container (used by Kubernetes and the load balancer)
+    location = /nginx-health {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # ---- 2. React app ---------------------------------------------------------
+    # Built JS/CSS files have a content hash in their name, so they can be cached forever.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Anything else: serve the file if it exists, otherwise index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+        # Always fetch a fresh index.html so users get new releases right away.
+        add_header Cache-Control "no-cache";
+    }
+}

@@ -1,0 +1,22 @@
+# Optional add-on: a real disk for MongoDB.
+# A "Component" is an extra that a deploy folder can switch on with:
+#   components:
+#     - ../k8s_manifests/mongo-disk
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - mongo-pvc.yaml
+
+patches:
+  # Swap MongoDB's temporary folder for the disk above.
+  - target:
+      kind: Deployment
+      name: mongodb
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/volumes/0
+        value:
+          name: data
+          persistentVolumeClaim:
+            claimName: mongo-data

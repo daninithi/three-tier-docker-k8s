@@ -1,0 +1,9 @@
+# Keep the Docker build context small and free of local junk.
+node_modules
+dist
+npm-debug.log*
+.env
+.env.*
+.DS_Store
+.vscode
+.idea

@@ -1,0 +1,54 @@
+# Run all three tiers locally with one command:
+#
+#   docker compose up --build
+#
+# Then open http://localhost:3000
+#
+#   Browser ──► frontend (nginx :80) ──/api──► api (Node :8080) ──► mongodb (:27017)
+#   Tier 1                                     Tier 2                Tier 3
+#
+# Only the frontend is published to your machine. The API and database are only
+# reachable inside the Docker network — the same idea as in Kubernetes.
+
+name: three-tier-todo
+
+services:
+  # ---------- Tier 3: database ----------
+  mongodb:
+    image: mongo:8.0
+    environment:
+      # Creates the root user the first time the database starts.
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password123}
+    volumes:
+      - mongo-data:/data/db # keeps data when the container is recreated
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ---------- Tier 2: API ----------
+  api:
+    build: ./app/backend
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/todo # "mongodb" = the service name above
+      MONGO_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:-password123}
+    depends_on:
+      mongodb:
+        condition: service_healthy # wait until MongoDB answers pings
+
+  # ---------- Tier 1: frontend ----------
+  frontend:
+    build: ./app/frontend
+    environment:
+      BACKEND_URL: http://api:8080 # "api" = the service name above
+    ports:
+      - "3000:80" # your machine's port 3000 -> nginx port 80
+    depends_on:
+      - api
+
+volumes:
+  mongo-data:

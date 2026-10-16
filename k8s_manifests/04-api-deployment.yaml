@@ -1,0 +1,71 @@
+# Step 4 (Tier 2): the Node.js API.
+# 2 replicas so one can restart (or be updated) while the other keeps serving.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: workshop
+  labels:
+    role: api
+    env: demo
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0 # never drop below 2 ready pods during an update
+  selector:
+    matchLabels:
+      role: api
+  template:
+    metadata:
+      labels:
+        role: api
+    spec:
+      containers:
+      - name: api
+        # Placeholder. k8s-ec2/ and k8s-eks/ replace it with the real image name.
+        image: YOUR_REGISTRY/three-tier-backend:v2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+          # "mongodb-svc" is the Kubernetes Service in front of MongoDB (03-mongo-service.yaml).
+          - name: MONGO_URI
+            value: mongodb://mongodb-svc:27017/todo
+          - name: MONGO_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: mongo-sec
+                key: username
+          - name: MONGO_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo-sec
+                key: password
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        # Liveness: "is the process alive?" Fails -> Kubernetes restarts the container.
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        # Readiness: "can it serve requests (is MongoDB connected)?"
+        # Fails -> the pod is taken out of the Service until it recovers. No restart.
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false

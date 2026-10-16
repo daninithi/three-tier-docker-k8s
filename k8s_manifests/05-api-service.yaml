@@ -1,0 +1,15 @@
+# Step 5 (Tier 2): a stable internal address ("api:8080") for the API pods.
+# ClusterIP = reachable only from inside the cluster. Only the frontend's nginx calls it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: workshop
+spec:
+  type: ClusterIP
+  selector:
+    role: api
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP

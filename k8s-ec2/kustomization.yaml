@@ -1,0 +1,26 @@
+# Settings for one EC2 server running k3s. Instructions: README.md in this folder.
+#
+# It uses the shared manifests in ../k8s_manifests (already set for k3s: Traefik
+# ingress, imagePullPolicy IfNotPresent) and adds:
+#   1. Images: the ones built on the server, not a registry.
+#   2. MongoDB: the real disk (mongo-disk), so tasks survive restarts.
+#
+# Apply with:   kubectl apply -k k8s-ec2/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../k8s_manifests
+
+# 2. A real disk for MongoDB.
+components:
+  - ../k8s_manifests/mongo-disk
+
+# 1. Images built on the server with "docker build" and imported into k3s.
+images:
+  - name: YOUR_REGISTRY/three-tier-backend
+    newName: three-tier-backend
+    newTag: v2
+  - name: YOUR_REGISTRY/three-tier-frontend
+    newName: three-tier-frontend
+    newTag: v2

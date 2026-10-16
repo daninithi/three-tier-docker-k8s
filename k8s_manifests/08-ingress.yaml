@@ -1,0 +1,28 @@
+# Step 8: the public entry point.
+#   - EC2/k3s (default here): Traefik, built into k3s, on port 80 of the server.
+#   - EKS: k8s-eks/ switches the class to "alb" and adds the ALB settings (annotations).
+#     The AWS Load Balancer Controller then creates an Application Load Balancer.
+#
+#   Internet ──► Traefik / ALB ──► frontend Service (nginx) ──/api──► api Service ──► mongodb-svc
+#
+# All traffic goes to the frontend. nginx forwards /api calls to the backend,
+# so the API and the database are never exposed to the internet directly.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mainlb
+  namespace: workshop
+spec:
+  ingressClassName: traefik
+  rules:
+    # No "host:" here, so the app answers on any address (server IP or ALB DNS name).
+    # To use your own domain, add:   - host: app.example.com
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

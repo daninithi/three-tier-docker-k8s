@@ -1,0 +1,54 @@
+# Step 6 (Tier 1): nginx serving the built React app, and forwarding /api to the API Service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: workshop
+  labels:
+    role: frontend
+    env: demo
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      role: frontend
+  template:
+    metadata:
+      labels:
+        role: frontend
+    spec:
+      containers:
+      - name: frontend
+        # Placeholder. k8s-ec2/ and k8s-eks/ replace it with the real image name.
+        image: YOUR_REGISTRY/three-tier-frontend:v2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        env:
+          # nginx forwards /api/* here. "api" is the backend Service (05-api-service.yaml).
+          - name: BACKEND_URL
+            value: http://api:8080
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /nginx-health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /nginx-health
+            port: 80
+          initialDelaySeconds: 2
+          periodSeconds: 5

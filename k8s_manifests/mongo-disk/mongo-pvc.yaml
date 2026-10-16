@@ -1,0 +1,14 @@
+# A disk for MongoDB, so tasks survive when the database pod restarts.
+# No storageClassName, so the cluster's default disk type is used
+# (on k3s: "local-path", a folder on the server's own disk).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-data
+  namespace: workshop
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

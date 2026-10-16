@@ -1,0 +1,21 @@
+# The manifests every setup needs, in order.
+#
+# Don't apply this folder directly. Apply the folder for where you deploy:
+#   k8s-ec2/  — one EC2 server with k3s   (kubectl apply -k k8s-ec2/)
+#   k8s-eks/  — EKS with an AWS ALB       (kubectl apply -k k8s-eks/)
+#
+# Optional extra, turned on only where needed:
+#   mongo-disk/  — a real disk for MongoDB (used by k8s-ec2)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - 00-namespace.yaml
+  - 01-mongo-secret.yaml
+  - 02-mongo-deployment.yaml
+  - 03-mongo-service.yaml
+  - 04-api-deployment.yaml
+  - 05-api-service.yaml
+  - 06-frontend-deployment.yaml
+  - 07-frontend-service.yaml
+  - 08-ingress.yaml

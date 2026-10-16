@@ -1,0 +1,6 @@
+# Step 0: a namespace is a "folder" inside the cluster that groups all our app's resources.
+# Every other file in this folder puts its resource into "workshop".
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workshop

@@ -1,0 +1,48 @@
+# Settings for EKS with an AWS Application Load Balancer. Instructions: README.md in this folder.
+#
+# Uses the shared manifests in ../k8s_manifests (which are set up for EC2/k3s) and changes:
+#   1. Images: your ECR registry, always downloaded.
+#   2. Ingress: the AWS load balancer (ALB) instead of Traefik.
+# No MongoDB disk here, so the EBS CSI driver add-on is not needed.
+#
+# Apply with:   kubectl apply -k k8s-eks/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../k8s_manifests
+
+# Replace 123456789012.dkr.ecr.us-east-1.amazonaws.com with your own ECR registry.
+images:
+  - name: YOUR_REGISTRY/three-tier-backend
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/three-tier-backend
+    newTag: v2
+  - name: YOUR_REGISTRY/three-tier-frontend
+    newName: 123456789012.dkr.ecr.us-east-1.amazonaws.com/three-tier-frontend
+    newTag: v2
+
+patches:
+  # 1. Always download the image from ECR, so a re-pushed tag is picked up.
+  - target:
+      kind: Deployment
+      name: (api|frontend)
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Always
+
+  # 2. Use the AWS load balancer (ALB) instead of Traefik, with the ALB's settings
+  #    (annotations): public, send traffic straight to pod IPs, health-check page.
+  - target:
+      kind: Ingress
+      name: mainlb
+    patch: |-
+      - op: replace
+        path: /spec/ingressClassName
+        value: alb
+      - op: add
+        path: /metadata/annotations
+        value:
+          alb.ingress.kubernetes.io/scheme: internet-facing
+          alb.ingress.kubernetes.io/target-type: ip
+          alb.ingress.kubernetes.io/healthcheck-path: /nginx-health

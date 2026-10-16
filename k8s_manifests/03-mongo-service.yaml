@@ -1,0 +1,15 @@
+# Step 3 (Tier 3): a stable internal address ("mongodb-svc:27017") for MongoDB.
+# Only the API pods connect to it.
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: workshop
+  name: mongodb-svc
+spec:
+  selector:
+    app: mongodb
+  ports:
+  - name: mongodb-svc
+    protocol: TCP
+    port: 27017
+    targetPort: 27017
